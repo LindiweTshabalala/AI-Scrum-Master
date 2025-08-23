@@ -12,8 +12,8 @@
     "@types/express": "^5.0.3"
   },
   "scripts": {
-    "dev": "dotenvx run -- tsx watch ./src/index.ts",
-    "start": "dotenvx run -- node --import tsx ./src/index.ts",
-    "prod": "dotenvx run -- node --import tsx ./src/index.ts"
+    "dev": "dotenvx run -- tsx watch ./src/app.ts",
+    "start": "dotenvx run -- node --import tsx ./src/app.ts",
+    "prod": "dotenvx run -- node --import tsx ./src/app.ts"
   }
 }
