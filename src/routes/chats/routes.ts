@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { config } from "config/env";
 import { app, getUserIdByEmail, slackChannelService } from "../../slack/index";
+import { sprintAnalyzer } from "../../agents/sprintAnalyzer";
 import bolt from "@slack/bolt";
 const { ExpressReceiver } = bolt;
 import type {
@@ -16,7 +17,7 @@ export const receiver = new ExpressReceiver({
 receiver.app.post(
   "/trigger-extraction",
   async (req: Request<{}, {}, TriggerExtractionRequestBody>, res: Response) => {
-    const { channelName, startDate, endDate, userEmail } = req.body;
+    const { channelName, startDate, endDate, userEmail, purpose } = req.body;
     if (!channelName || !startDate || !endDate || !userEmail) {
       return res
         .status(400)
@@ -124,8 +125,11 @@ receiver.app.post(
         })
         .join("\n");
 
-      // Ensure we have a DM channel id (starts with 'D') for the user so the
-      // files.uploadV2 call receives a valid channel_id value.
+      let analysis = "";
+      if (purpose === "sprint-retro") {
+        analysis = await sprintAnalyzer(formattedText, userEmail);
+      }
+
       const dmOpen = await app.client.conversations.open({ users: userId });
       const dmChannelId = dmOpen.channel?.id;
 
@@ -137,12 +141,15 @@ receiver.app.post(
         return;
       }
 
-      await app.client.files.uploadV2({
-        channel_id: dmChannelId,
-        content: formattedText,
-        filename: `chat-export-${channelName}-${startDate}-to-${endDate}.txt`,
-        initial_comment: `Here is the chat history you requested for channel #${channelName}.`,
-      });
+      // If we have an analysis, upload it
+      if (analysis) {
+        await app.client.files.uploadV2({
+          channel_id: dmChannelId,
+          content: analysis,
+          filename: `sprint-retrospective-${startDate}-to-${endDate}.txt`,
+          initial_comment: "Sprint Retrospective Analysis",
+        });
+      }
     } catch (error: any) {
       console.error("Extraction failed:", error);
       await app.client.chat.postMessage({

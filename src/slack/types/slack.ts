@@ -60,4 +60,5 @@ export interface TriggerExtractionRequestBody {
     startDate: string;
     endDate: string;
     userEmail: string;
+    purpose: string;
 }
