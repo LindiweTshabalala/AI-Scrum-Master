@@ -1,6 +1,6 @@
 import { app } from "../index";
 import { SlackMessage } from "../types/slack";
-import { dataAnalyzer } from "../../agents/dataAnalyzer";
+import { sprintAnalyzer, AnalysisType } from "../../agents/sprintAnalyzer";
 
 export interface ExtractionResult {
   success: boolean;
@@ -94,11 +94,16 @@ export class ChatExtractionService {
 
       // Generate analysis based on purpose
       let analysis = "";
-      if (purpose === "sprint-retro" || purpose === "user-review") {
-        analysis = await dataAnalyzer({
+      console.log(`Analyzing with purpose: ${purpose}`);
+      if (
+        purpose === "sprint-retro" ||
+        purpose === "user-review" ||
+        purpose === "award-nominations"
+      ) {
+        analysis = await sprintAnalyzer({
           chatHistory: formattedText,
           author: userIdToEmail[userId] || userId,
-          type: purpose === "user-review" ? "user-review" : "sprint-retro",
+          type: purpose as AnalysisType, // This ensures type safety
           reviewUserEmail: reviewUserEmail,
           sprintStart: startDate,
           sprintEnd: endDate,
@@ -119,14 +124,22 @@ export class ChatExtractionService {
 
       // Upload analysis if available
       if (analysis) {
-        const isUserReview = purpose === "user-review";
-        const filename = isUserReview
-          ? `user-review-${reviewUserEmail}-${startDate}-to-${endDate}.txt`
-          : `sprint-retrospective-${startDate}-to-${endDate}.txt`;
+        let filename: string;
+        let initialComment: string;
 
-        const initialComment = isUserReview
-          ? `User Review Analysis for ${reviewUserEmail}`
-          : "Sprint Retrospective Analysis";
+        switch (purpose) {
+          case "user-review":
+            filename = `user-review-${reviewUserEmail}-${startDate}-to-${endDate}.txt`;
+            initialComment = `User Review Analysis for ${reviewUserEmail}`;
+            break;
+          case "award-nominations":
+            filename = `award-nominations-${startDate}-to-${endDate}.txt`;
+            initialComment = "Company Awards Nomination Analysis";
+            break;
+          default:
+            filename = `sprint-retrospective-${startDate}-to-${endDate}.txt`;
+            initialComment = "Sprint Retrospective Analysis";
+        }
 
         await app.client.files.uploadV2({
           channel_id: dmChannelId,
