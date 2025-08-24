@@ -59,6 +59,7 @@ export interface TriggerExtractionRequestBody {
     channelName: string;
     startDate: string;
     endDate: string;
-    userEmail: string;
+    userToEmail: string;
+    analyzeUserEmail?: string;
     purpose: string;
 }
