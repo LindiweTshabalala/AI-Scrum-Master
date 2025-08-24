@@ -1,7 +1,7 @@
 import { getActiveUserIds } from '../../slack';
 import { WebClient } from '@slack/web-api';
 
-const STANDUP_MESSAGE = "Hey 👋 Time for daily stand-up! Please share:\n" +
+export const STANDUP_MESSAGE = "Hey 👋 Time for daily stand-up! Please share:\n" +
     "1️⃣ What did you accomplish yesterday?\n" +
     "2️⃣ What are you working on today?\n" +
     "3️⃣ Any blockers or challenges?";
@@ -18,6 +18,21 @@ async function sendStandupRequest(client: WebClient, userId: string): Promise<vo
         });
     } catch (error) {
         console.error(`Failed to send standup request to user ${userId}:`, error);
+    }
+}
+
+export async function sendStandupReport(client: WebClient, channel: string, message: string): Promise<void> {
+    try {
+        await client.chat.postMessage({
+          channel: channel,
+          text: message,
+          as_user: true,
+        });
+    } catch (error) {
+        console.error(
+          `Failed to send standup request to user ${channel}:`,
+          error
+        );
     }
 }
 
