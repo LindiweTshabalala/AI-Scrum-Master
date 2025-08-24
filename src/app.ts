@@ -3,9 +3,11 @@ import cors from "cors";
 import { config } from "./config/env";
 import routes from "./routes";
 import { app as slackApp } from "./slack/index";
-import { standupAgent } from "agents/standupAgent"
+import { standupAgent } from "agents/standupAgent";
 import { STANDUP_MESSAGE } from "routes/stand-up";
 import isStandup from "utils/isStandup";
+import { AppDataSource } from "./database/config";
+import "reflect-metadata";
 
 const app = express();
 
@@ -22,10 +24,40 @@ app.use(routes);
 
 const PORT = config.port || 3000;
 
-app.listen(PORT, async () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  await slackApp.start();
-  console.log("⚡️ Bolt app started");
+// Initialize TypeORM connection
+AppDataSource.initialize()
+    .then(async () => {
+        console.log("Data Source has been initialized!");
+        
+        // Verify the connection
+        try {
+            await AppDataSource.query('SELECT 1');
+            console.log("Database connection verified successfully!");
+
+            // Log connection details (without sensitive info)
+            const connectionOptions = AppDataSource.options;
+            console.log("Database connection details:", {
+                type: connectionOptions.type,
+                host: connectionOptions.host,
+                port: connectionOptions.port,
+                database: connectionOptions.database,
+                ssl: connectionOptions.ssl ? "enabled" : "disabled",
+                entities: connectionOptions.entities?.length || 0,
+            });
+
+            app.listen(PORT, async () => {
+                console.log(`🚀 Server running on port ${PORT}`);
+                await slackApp.start();
+                console.log("⚡️ Bolt app started");
+            });
+        } catch (error) {
+            console.error("Database connection verification failed:", error);
+            process.exit(1);
+        }
+    })
+    .catch((err) => {
+        console.error("Error during Data Source initialization:", err);
+        process.exit(1);
 });
 
 type SlackMessageEvent = {
