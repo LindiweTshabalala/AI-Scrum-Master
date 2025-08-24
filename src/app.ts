@@ -3,6 +3,8 @@ import cors from "cors";
 import { config } from "./config/env";
 import routes from "./routes";
 import { app as slackApp } from "./slack/index";
+import { gemini } from "slack/gemini";
+import { STANDUP_MESSAGE } from "routes/stand-up";
 
 const app = express();
 
@@ -25,16 +27,36 @@ app.listen(PORT, async () => {
   console.log("⚡️ Bolt app started");
 });
 
+type SlackMessageEvent = {
+  user: string;
+  type: "message";
+  ts: string;
+  client_msg_id: string;
+  text: string;
+  team: string;
+  blocks: {
+    type: "rich_text";
+    block_id: string;
+    elements: unknown[]; // can refine further if you know the element structure
+  }[];
+  channel: string;
+  event_ts: string;
+  channel_type: "im" | "channel" | "group" | "mpim";
+};
+
 // LISTENER for EVERY message the bot receives.
 slackApp.message(async ({ message, say }) => {
-  // Ignore messages sent by the bot itself to prevent loops.
-  if (
-    message.subtype === "bot_message" ||
-    message.subtype === "message_deleted"
-  ) {
-    return;
-  }
+  // if (
+  //   message.subtype === "bot_message" ||
+  //   message.subtype === "message_deleted"
+  // ) {
+  //   return;
+  // }
+  const userMessage = message as SlackMessageEvent
+
+
+  console.log("Received a message:", message);
+  await gemini(STANDUP_MESSAGE, userMessage.text);
 
   // Log the full message object to the console to see its structure.
-  console.log("Received a message:", message);
 });
