@@ -48,3 +48,16 @@ export interface UserStats {
   botUsers: number;
   appUsers: number;
 }
+
+export interface SlackMessage {
+  ts: string;
+  user?: string;
+  text?: string;
+}
+
+export interface TriggerExtractionRequestBody {
+    channelName: string;
+    startDate: string;
+    endDate: string;
+    userEmail: string;
+}

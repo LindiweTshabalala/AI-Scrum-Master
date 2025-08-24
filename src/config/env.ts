@@ -15,6 +15,7 @@ interface Config {
     password: string;
     name: string;
   };
+  signing_secret: string;
 }
 
 export const config: Config = {
@@ -28,5 +29,6 @@ export const config: Config = {
     user: process.env.DB_USER || "postgres",
     password: process.env.DB_PASSWORD || "",
     name: process.env.DB_NAME || "scrum_master_db"
-  }
+  },
+  signing_secret: process.env.SIGNING_SECRET ?? "",
 };

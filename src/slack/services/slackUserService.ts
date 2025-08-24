@@ -15,6 +15,7 @@ import {
 } from "../utils/validation";
 import { filterUsers, generateUserStats } from "../utils/filters";
 import { WebClient } from "@slack/web-api";
+import { app } from "../index";
 
 export class SlackUserService {
   private readonly client: WebClient;
@@ -158,4 +159,18 @@ export class SlackUserService {
 
     return result.userIds;
   }
+
+  /**
+   * Method to get user by email
+   */
+  public async findUserIdByEmail(email: string):Promise<string | null | undefined>  {
+  try {
+    const result = await app.client.users.lookupByEmail({ email });
+    return result.user?.id;
+  } catch (error) {
+    console.error(`Failed to find user by email ${email}:`, error);
+    return null;
+  }
+}
+
 }

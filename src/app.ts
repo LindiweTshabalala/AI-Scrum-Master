@@ -14,7 +14,7 @@ AppDataSource.initialize()
   .then(() => {
     console.log("Database connection initialized");
   })
-  .catch((error) => {
+  .catch((error: any) => {
     console.error("Error initializing database:", error);
   });
 
@@ -56,6 +56,7 @@ type SlackMessageEvent = {
   channel_type: "im" | "channel" | "group" | "mpim";
 };
 
+const userEmailCache = new Map<string, string>();
 // LISTENER for EVERY message the bot receives.
 slackApp.message(async ({ message, say }) => {
   const userMessage = message as SlackMessageEvent;
@@ -64,7 +65,7 @@ slackApp.message(async ({ message, say }) => {
   console.log("Received a message:", message);
   
   try {
-    const analysis: GeminiAnalysis = await gemini(STANDUP_MESSAGE, userMessage.text);
+    const analysis: GeminiAnalysis = await gemini(STANDUP_MESSAGE, userMessage.text, userMessage.user);
 
     await standupService.saveStandupResponse({
       userId: userMessage.user,
@@ -83,9 +84,38 @@ slackApp.message(async ({ message, say }) => {
   } catch (error) {
     console.error("Error processing standup:", error);
   }
+
+  if (
+    message.subtype === "bot_message" ||
+    message.subtype === "message_deleted"
+  ) {
+    return;
+  }
+
+  const userId = (message as any).user;
+  if (userId) {
+    let email = userEmailCache.get(userId);
+    if (!email) {
+      try {
+        const resp = await slackApp.client.users.info({ user: userId });
+        email = resp.user?.profile?.email;
+        if (email) userEmailCache.set(userId, email);
+      } catch (err) {
+        console.error("Failed to resolve user email for", userId, err);
+        // leave email undefined so we can fallback
+      }
+    }
+
+    const author = email ?? userId; // prefer email, fallback to id
+    console.log(`Received a message from ${author}:`, message);
+
+    const userMessage = message as SlackMessageEvent;
+
+    await gemini(STANDUP_MESSAGE, userMessage.text, author);
+  }
 });
 
-export async function gemini(prompt: string, text: string): Promise<GeminiAnalysis> {
+export async function gemini(prompt: string, text: string, author: any): Promise<GeminiAnalysis> {
   const analysis: GeminiAnalysis = {
         sentiment: 0,
         productivity: 0,
