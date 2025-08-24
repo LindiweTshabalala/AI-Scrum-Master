@@ -8,6 +8,10 @@ export interface ExtractionResult {
 }
 
 export class ChatExtractionService {
+  /**
+   * Extracts messages from a channel over a date range, performs optional analysis,
+   * and delivers output either to a channel (retro) or via DM (other types).
+   */
   async extractAndAnalyzeChat(
     channelId: string,
     userId: string,

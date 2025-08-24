@@ -1,5 +1,6 @@
 import { WebClient } from "@slack/web-api";
 
+/** Returns non-bot, non-app, non-deleted user IDs for the workspace. */
 export async function getActiveUserIds(botToken: string): Promise<string[]> {
   const client = new WebClient(botToken);
 
@@ -18,6 +19,7 @@ export async function getActiveUserIds(botToken: string): Promise<string[]> {
   }
 }
 
+/** Looks up a user ID by email, returns null if not found. */
 export async function getUserByEmail(
   client: WebClient,
   email: string

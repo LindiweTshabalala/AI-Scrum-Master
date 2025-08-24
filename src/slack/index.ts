@@ -6,6 +6,7 @@ import { getUserByEmail } from "./services/slackUserService";
 import { config } from "../config/env";
 import { SlackChannelService } from "./services/slackChannelService";
 
+/** Resolves a user ID by email using a lightweight WebClient instance. */
 export async function getUserIdByEmail(
   botToken: string,
   email: string

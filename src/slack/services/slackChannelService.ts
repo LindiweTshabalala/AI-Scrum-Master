@@ -4,6 +4,7 @@ export class SlackChannelService {
     this.appClient = appClient.client ?? appClient;
   }
 
+  /** Finds a public channel ID by its human-readable name (with or without leading #). */
   async findChannelIdByName(channelName: string): Promise<string | null> {
     try {
       const cleanChannelName = channelName.replace(/^#/, "");

@@ -8,6 +8,9 @@ interface Config {
   slack_app_token: string;
   signing_secret: string;
   ai_model: string;
+  gemini_api_key: string;
+  jira_format: string;
+  daily_standup_id: string;
 }
 
 export const config: Config = {
@@ -17,4 +20,7 @@ export const config: Config = {
   slack_app_token: process.env.SLACK_APP_TOKEN ?? "",
   signing_secret: process.env.SIGNING_SECRET ?? "",
   ai_model: process.env.AI_MODEL || "gemini-2.0-flash-001",
+  gemini_api_key: process.env.GEMINI_API_KEY ?? "",
+  jira_format: process.env.JIRA_FORMAT ?? "",
+  daily_standup_id: process.env.DAILY_STANDUP_ID ?? "",
 };

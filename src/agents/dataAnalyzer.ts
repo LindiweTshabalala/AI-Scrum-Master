@@ -2,8 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { config } from "config/env";
 import { loadPrompt } from "./promptLoader";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? "";
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+const ai = new GoogleGenAI({ apiKey: config.gemini_api_key });
 
 export type AnalysisType = "sprint-retro" | "user-review" | "award-nominations";
 
@@ -21,6 +20,10 @@ export interface AnalysisOptions {
  * @param options - Analysis options including chat history, type, and additional parameters
  * @returns A string containing the analysis result based on the specified type
  */
+/**
+ * Runs AI-powered analysis (retrospective, user review, or award nominations)
+ * on provided chat history using a prompt template and returns formatted text.
+ */
 export async function dataAnalyzer({
   chatHistory,
   author,
@@ -29,7 +32,6 @@ export async function dataAnalyzer({
   sprintStart,
   sprintEnd,
 }: AnalysisOptions): Promise<string> {
-  // Determine which template to use based on analysis type
   let templateName: string;
   switch (type) {
     case "user-review":
@@ -42,15 +44,12 @@ export async function dataAnalyzer({
       templateName = "formatRetrospective.txt";
   }
 
-  // Read the appropriate template
   const template = await loadPrompt(templateName);
 
-  // Fill in the common placeholders
   let prompt = template
     .replace("{{current_date}}", new Date().toISOString())
     .replace("{{chat_history}}", chatHistory);
 
-  // Add type-specific replacements
   switch (type) {
     case "user-review":
       if (reviewUserEmail) {

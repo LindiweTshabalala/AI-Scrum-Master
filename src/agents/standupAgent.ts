@@ -2,12 +2,15 @@ import { WebClient } from "@slack/web-api";
 import { GoogleGenAI } from "@google/genai";
 import { getActiveUserIds } from "../slack";
 import { sendStandupReport } from "../routes/stand-up";
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? "";
+const GEMINI_API_KEY = config.gemini_api_key;
 import { loadPrompt } from "./promptLoader";
 import { config } from "config/env";
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
+/**
+ * Generates a formatted stand-up report from a raw user response and sends it to the report channel.
+ */
 export async function standupAgent(
   _questions: string,
   user_response: string,
@@ -17,7 +20,7 @@ export async function standupAgent(
 
   const finalPrompt = promptTemplate
     .replace("{{current_date}}", new Date().toISOString())
-    .replace("{{jira_format}}", process.env.JIRA_FORMAT ?? "")
+    .replace("{{jira_format}}", config.jira_format)
     .replace("{{user_response}}", user_response)
     .replace("{{author}}", author);
 
@@ -31,8 +34,11 @@ export async function standupAgent(
   console.log("received Gemini response");
 }
 
+/**
+ * Sends the generated stand-up report to the configured stand-up channel for a subset of active users.
+ */
 const sendReportToChannel = async (response: any) => {
-  const botToken = process.env.AI_MIGO_TOKEN ?? "";
+  const botToken = config.ai_migo_token;
   const client = new WebClient(botToken);
   const activeUserIds = await getActiveUserIds(botToken);
 
@@ -40,11 +46,7 @@ const sendReportToChannel = async (response: any) => {
     if (i == 1) {
       break;
     }
-    await sendStandupReport(
-      client,
-      process.env.DAILY_STANDUP_ID ?? "",
-      response
-    );
+    await sendStandupReport(client, config.daily_standup_id, response);
     await new Promise((resolve) => setTimeout(resolve, 1500));
   }
 };

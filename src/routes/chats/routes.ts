@@ -5,8 +5,6 @@ import { chatExtractionService } from "../../slack/services/chatExtractionServic
 import bolt from "@slack/bolt";
 const { ExpressReceiver } = bolt;
 import type { TriggerExtractionRequestBody } from "../../slack/types/slack";
-
-// 1. Create an ExpressReceiver
 export const receiver = new ExpressReceiver({
   signingSecret: config.signing_secret,
 });
@@ -32,7 +30,6 @@ receiver.app.post(
         );
     }
 
-    // For sprint-retro, outputChannelName is required
     if (purpose === "sprint-retro" && !outputChannelName) {
       return res
         .status(400)
@@ -46,7 +43,6 @@ receiver.app.post(
       channelName
     );
 
-    // Look up output channel ID for sprint-retro
     let outputChannelId: string | undefined;
     if (purpose === "sprint-retro" && outputChannelName) {
       const foundOutputChannelId =
@@ -59,7 +55,6 @@ receiver.app.post(
       outputChannelId = foundOutputChannelId;
     }
 
-    // Validate lookups
     if (!userId || !channelId) {
       const errorMessage = !userId
         ? `Could not find a user with the email: ${userToEmail}`
@@ -69,7 +64,6 @@ receiver.app.post(
       return res.status(404).send(errorMessage);
     }
 
-    // Trigger the extraction and analysis
     const result = await chatExtractionService.extractAndAnalyzeChat(
       channelId,
       userId,

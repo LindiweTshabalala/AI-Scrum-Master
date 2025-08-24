@@ -62,5 +62,5 @@ export interface TriggerExtractionRequestBody {
   userToEmail: string;
   reviewUserEmail?: string;
   purpose: string;
-  outputChannelName?: string; // Channel to send sprint-retro results to
+  outputChannelName?: string;
 }

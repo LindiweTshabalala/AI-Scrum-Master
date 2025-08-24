@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { sendStandupRequests } from "./index";
+import { config } from "../../config/env";
 
 const router = Router();
 
 router.post("/trigger", async (_req, res) => {
   try {
-    const botToken = process.env.AI_MIGO_TOKEN;
+    const botToken = config.ai_migo_token;
     if (!botToken) {
       throw new Error("AI_MIGO_TOKEN is not configured");
     }

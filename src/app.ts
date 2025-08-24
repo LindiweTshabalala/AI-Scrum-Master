@@ -45,6 +45,7 @@ type SlackMessageEvent = {
 
 const userEmailCache = new Map<string, string>();
 
+/** Resolves and caches a user's email, falling back to user ID if unavailable. */
 async function getUserEmail(userId: string): Promise<string> {
   let email = userEmailCache.get(userId);
   if (!email) {
@@ -61,6 +62,7 @@ async function getUserEmail(userId: string): Promise<string> {
   return email ?? userId;
 }
 
+/** Global message listener for stand-up trigger messages. */
 slackApp.message(async ({ message }) => {
   if (
     message.subtype === "bot_message" ||
