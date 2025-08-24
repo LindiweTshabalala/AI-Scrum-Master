@@ -21,6 +21,7 @@ receiver.app.post(
       reviewUserEmail,
       userToEmail,
       purpose,
+      outputChannelName, // New parameter for sprint-retro output channel
     } = req.body;
 
     // Validate required parameters
@@ -32,11 +33,33 @@ receiver.app.post(
         );
     }
 
+    // For sprint-retro, outputChannelName is required
+    if (purpose === "sprint-retro" && !outputChannelName) {
+      return res
+        .status(400)
+        .send(
+          "Missing required parameter: outputChannelName is required for sprint-retro analysis"
+        );
+    }
+
     // Look up IDs first
     const userId = await getUserIdByEmail(config.ai_migo_token, userToEmail);
     const channelId = await slackChannelService.findChannelIdByName(
       channelName
     );
+
+    // Look up output channel ID for sprint-retro
+    let outputChannelId: string | undefined;
+    if (purpose === "sprint-retro" && outputChannelName) {
+      const foundOutputChannelId =
+        await slackChannelService.findChannelIdByName(outputChannelName);
+      if (!foundOutputChannelId) {
+        return res
+          .status(404)
+          .send(`Could not find output channel named #${outputChannelName}`);
+      }
+      outputChannelId = foundOutputChannelId;
+    }
 
     // Validate lookups
     if (!userId || !channelId) {
@@ -56,7 +79,8 @@ receiver.app.post(
       startDate,
       endDate,
       reviewUserEmail,
-      purpose
+      purpose,
+      outputChannelId // Pass the output channel ID
     );
 
     if (!result.success) {

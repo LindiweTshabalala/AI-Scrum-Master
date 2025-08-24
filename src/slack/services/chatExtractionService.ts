@@ -1,6 +1,6 @@
 import { app } from "../index";
 import { SlackMessage } from "../types/slack";
-import { sprintAnalyzer, AnalysisType } from "../../agents/sprintAnalyzer";
+import { dataAnalyzer, AnalysisType } from "../../agents/dataAnalyzer";
 
 export interface ExtractionResult {
   success: boolean;
@@ -15,7 +15,8 @@ export class ChatExtractionService {
     startDate: string,
     endDate: string,
     reviewUserEmail?: string,
-    purpose?: string
+    purpose?: string,
+    outputChannelId?: string // New parameter for sprint-retro output channel
   ): Promise<ExtractionResult> {
     try {
       const oldestTimestamp = new Date(startDate).getTime() / 1000;
@@ -100,7 +101,7 @@ export class ChatExtractionService {
         purpose === "user-review" ||
         purpose === "award-nominations"
       ) {
-        analysis = await sprintAnalyzer({
+        analysis = await dataAnalyzer({
           chatHistory: formattedText,
           author: userIdToEmail[userId] || userId,
           type: purpose as AnalysisType, // This ensures type safety
@@ -110,43 +111,54 @@ export class ChatExtractionService {
         });
       }
 
-      // Send results via DM
-      const dmOpen = await app.client.conversations.open({ users: userId });
-      const dmChannelId = dmOpen.channel?.id;
+      // Send results to appropriate destination
+      if (purpose === "sprint-retro" && outputChannelId) {
+        // For sprint-retro, send to specified channel
+        if (analysis) {
+          await app.client.chat.postMessage({
+            channel: outputChannelId,
+            text: `Sprint Retrospective Analysis (${startDate} to ${endDate}):\n\`\`\`\n${analysis}\n\`\`\``,
+          });
+        }
+      } else {
+        // For other analysis types, send via DM
+        const dmOpen = await app.client.conversations.open({ users: userId });
+        const dmChannelId = dmOpen.channel?.id;
 
-      if (!dmChannelId) {
-        await app.client.chat.postMessage({
-          channel: userId,
-          text: `Sorry, I couldn't open a DM with you to send the chat export.`,
-        });
-        return { success: false, error: "Could not open DM channel" };
-      }
-
-      // Upload analysis if available
-      if (analysis) {
-        let filename: string;
-        let initialComment: string;
-
-        switch (purpose) {
-          case "user-review":
-            filename = `user-review-${reviewUserEmail}-${startDate}-to-${endDate}.txt`;
-            initialComment = `User Review Analysis for ${reviewUserEmail}`;
-            break;
-          case "award-nominations":
-            filename = `award-nominations-${startDate}-to-${endDate}.txt`;
-            initialComment = "Company Awards Nomination Analysis";
-            break;
-          default:
-            filename = `sprint-retrospective-${startDate}-to-${endDate}.txt`;
-            initialComment = "Sprint Retrospective Analysis";
+        if (!dmChannelId) {
+          await app.client.chat.postMessage({
+            channel: userId,
+            text: `Sorry, I couldn't open a DM with you to send the analysis.`,
+          });
+          return { success: false, error: "Could not open DM channel" };
         }
 
-        await app.client.files.uploadV2({
-          channel_id: dmChannelId,
-          content: analysis,
-          filename,
-          initial_comment: initialComment,
-        });
+        // Upload analysis if available
+        if (analysis) {
+          let filename: string;
+          let initialComment: string;
+
+          switch (purpose) {
+            case "user-review":
+              filename = `user-review-${reviewUserEmail}-${startDate}-to-${endDate}.txt`;
+              initialComment = `User Review Analysis for ${reviewUserEmail}`;
+              break;
+            case "award-nominations":
+              filename = `award-nominations-${startDate}-to-${endDate}.txt`;
+              initialComment = "Company Awards Nomination Analysis";
+              break;
+            default:
+              filename = `sprint-retrospective-${startDate}-to-${endDate}.txt`;
+              initialComment = "Sprint Retrospective Analysis";
+          }
+
+          await app.client.files.uploadV2({
+            channel_id: dmChannelId,
+            content: analysis,
+            filename,
+            initial_comment: initialComment,
+          });
+        }
       }
 
       return { success: true };
