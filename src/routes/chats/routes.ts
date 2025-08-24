@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
-import { config } from "config/env";
+import { config } from "../../config/env";
 import { getUserIdByEmail, slackChannelService } from "../../slack/index";
 import { chatExtractionService } from "../../slack/services/chatExtractionService";
 import bolt from "@slack/bolt";
 const { ExpressReceiver } = bolt;
-import type { TriggerExtractionRequestBody } from "slack/types/slack";
+import type { TriggerExtractionRequestBody } from "../../slack/types/slack";
 
 // 1. Create an ExpressReceiver
 export const receiver = new ExpressReceiver({
@@ -21,11 +21,10 @@ receiver.app.post(
       reviewUserEmail,
       userToEmail,
       purpose,
-      outputChannelName, // New parameter for sprint-retro output channel
+      outputChannelName,
     } = req.body;
 
-    // Validate required parameters
-    if (!channelName || !startDate || !endDate || !userToEmail) {
+    if (!channelName || !startDate || !endDate) {
       return res
         .status(400)
         .send(
@@ -42,7 +41,6 @@ receiver.app.post(
         );
     }
 
-    // Look up IDs first
     const userId = await getUserIdByEmail(config.ai_migo_token, userToEmail);
     const channelId = await slackChannelService.findChannelIdByName(
       channelName
@@ -80,7 +78,7 @@ receiver.app.post(
       endDate,
       reviewUserEmail,
       purpose,
-      outputChannelId // Pass the output channel ID
+      outputChannelId
     );
 
     if (!result.success) {

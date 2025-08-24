@@ -1,19 +1,19 @@
 import { GoogleGenAI } from "@google/genai";
-import fs from "node:fs/promises";
-import path from "node:path";
+import { config } from "config/env";
+import { loadPrompt } from "./promptLoader";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? "";
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 export type AnalysisType = "sprint-retro" | "user-review" | "award-nominations";
 
-interface AnalysisOptions {
+export interface AnalysisOptions {
   chatHistory: string;
   author: string;
   type: AnalysisType;
-  reviewUserEmail?: string;
-  sprintStart?: string;
-  sprintEnd?: string;
+  reviewUserEmail?: string | undefined;
+  sprintStart?: string | undefined;
+  sprintEnd?: string | undefined;
 }
 
 /**
@@ -43,14 +43,7 @@ export async function dataAnalyzer({
   }
 
   // Read the appropriate template
-  const promptPath = path.join(
-    process.cwd(),
-    "src",
-    "agents",
-    "propmts",
-    templateName
-  );
-  const template = await fs.readFile(promptPath, "utf-8");
+  const template = await loadPrompt(templateName);
 
   // Fill in the common placeholders
   let prompt = template
@@ -80,10 +73,9 @@ export async function dataAnalyzer({
   console.log(`Analysis type: ${type}`);
 
   const aiResponse = await ai.models.generateContent({
-    model: "gemini-2.0-flash-001",
+    model: config.ai_model,
     contents: prompt,
   });
 
-  // Return the generated summary as a string
   return (aiResponse as any).text ?? JSON.stringify(aiResponse);
 }

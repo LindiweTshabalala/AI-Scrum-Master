@@ -16,7 +16,7 @@ export class ChatExtractionService {
     endDate: string,
     reviewUserEmail?: string,
     purpose?: string,
-    outputChannelId?: string // New parameter for sprint-retro output channel
+    outputChannelId?: string
   ): Promise<ExtractionResult> {
     try {
       const oldestTimestamp = new Date(startDate).getTime() / 1000;
@@ -27,15 +27,15 @@ export class ChatExtractionService {
       let hasMore: boolean = true;
       let cursor: string | undefined;
 
-      // Fetch all messages
       while (hasMore) {
-        const result = await app.client.conversations.history({
+        const historyArgs: any = {
           channel: channelId,
           oldest: oldestTimestamp.toString(),
           latest: latestTimestamp.toString(),
-          cursor: cursor,
           limit: 200,
-        });
+        };
+        if (cursor) historyArgs.cursor = cursor;
+        const result = await app.client.conversations.history(historyArgs);
 
         allMessages = allMessages.concat(result.messages as SlackMessage[]);
         hasMore = result.has_more as boolean;
@@ -50,7 +50,6 @@ export class ChatExtractionService {
         return { success: true };
       }
 
-      // Filter for user messages only
       const userMessages = (allMessages as any[]).filter(
         (m) => m && m.type === "message" && !m.subtype && m.user && m.text
       ) as SlackMessage[];
@@ -63,7 +62,6 @@ export class ChatExtractionService {
         return { success: true };
       }
 
-      // Resolve user IDs to emails
       const uniqueUserIds = Array.from(
         new Set(userMessages.map((m) => m.user!).filter(Boolean))
       );
@@ -81,7 +79,6 @@ export class ChatExtractionService {
         })
       );
 
-      // Format messages
       const formattedText = userMessages
         .reverse()
         .map((msg) => {
@@ -93,8 +90,7 @@ export class ChatExtractionService {
         })
         .join("\n");
 
-      // Generate analysis based on purpose
-      let analysis = "";
+      let analysis: string = "";
       console.log(`Analyzing with purpose: ${purpose}`);
       if (
         purpose === "sprint-retro" ||
@@ -104,16 +100,14 @@ export class ChatExtractionService {
         analysis = await dataAnalyzer({
           chatHistory: formattedText,
           author: userIdToEmail[userId] || userId,
-          type: purpose as AnalysisType, // This ensures type safety
-          reviewUserEmail: reviewUserEmail,
-          sprintStart: startDate,
-          sprintEnd: endDate,
+          type: purpose as AnalysisType,
+          reviewUserEmail: reviewUserEmail ?? undefined,
+          sprintStart: startDate ?? undefined,
+          sprintEnd: endDate ?? undefined,
         });
       }
 
-      // Send results to appropriate destination
       if (purpose === "sprint-retro" && outputChannelId) {
-        // For sprint-retro, send to specified channel
         if (analysis) {
           await app.client.chat.postMessage({
             channel: outputChannelId,
@@ -121,7 +115,6 @@ export class ChatExtractionService {
           });
         }
       } else {
-        // For other analysis types, send via DM
         const dmOpen = await app.client.conversations.open({ users: userId });
         const dmChannelId = dmOpen.channel?.id;
 
@@ -133,7 +126,6 @@ export class ChatExtractionService {
           return { success: false, error: "Could not open DM channel" };
         }
 
-        // Upload analysis if available
         if (analysis) {
           let filename: string;
           let initialComment: string;

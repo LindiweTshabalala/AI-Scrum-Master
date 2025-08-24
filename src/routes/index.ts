@@ -6,7 +6,6 @@ const router = Router();
 
 router.use("/api/stand-up", standupRoutes);
 
-
 router.use("/api/chats", chatsReceiver.app);
 
 export default router;
