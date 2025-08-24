@@ -14,7 +14,14 @@ export const receiver = new ExpressReceiver({
 receiver.app.post(
   "/analyze",
   async (req: Request<{}, {}, TriggerExtractionRequestBody>, res: Response) => {
-    const { channelName, startDate, endDate, analyzeUserEmail, userToEmail, purpose } = req.body;
+    const {
+      channelName,
+      startDate,
+      endDate,
+      reviewUserEmail,
+      userToEmail,
+      purpose,
+    } = req.body;
 
     // Validate required parameters
     if (!channelName || !startDate || !endDate || !userToEmail) {
@@ -48,7 +55,7 @@ receiver.app.post(
       channelName,
       startDate,
       endDate,
-      analyzeUserEmail,
+      reviewUserEmail,
       purpose
     );
 

@@ -56,10 +56,10 @@ export interface SlackMessage {
 }
 
 export interface TriggerExtractionRequestBody {
-    channelName: string;
-    startDate: string;
-    endDate: string;
-    userToEmail: string;
-    analyzeUserEmail?: string;
-    purpose: string;
+  channelName: string;
+  startDate: string;
+  endDate: string;
+  userToEmail: string;
+  reviewUserEmail?: string;
+  purpose: string;
 }

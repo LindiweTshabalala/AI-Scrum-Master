@@ -1,6 +1,6 @@
 import { app } from "../index";
 import { SlackMessage } from "../types/slack";
-import { sprintAnalyzer } from "../../agents/sprintAnalyzer";
+import { dataAnalyzer } from "../../agents/dataAnalyzer";
 
 export interface ExtractionResult {
   success: boolean;
@@ -14,7 +14,7 @@ export class ChatExtractionService {
     channelName: string,
     startDate: string,
     endDate: string,
-    analyzeUserEmail?: string,
+    reviewUserEmail?: string,
     purpose?: string
   ): Promise<ExtractionResult> {
     try {
@@ -92,13 +92,17 @@ export class ChatExtractionService {
         })
         .join("\n");
 
-      // Generate analysis if requested
+      // Generate analysis based on purpose
       let analysis = "";
-      if (purpose === "sprint-retro") {
-        analysis = await sprintAnalyzer(
-          formattedText,
-          userIdToEmail[userId] || userId
-        );
+      if (purpose === "sprint-retro" || purpose === "user-review") {
+        analysis = await dataAnalyzer({
+          chatHistory: formattedText,
+          author: userIdToEmail[userId] || userId,
+          type: purpose === "user-review" ? "user-review" : "sprint-retro",
+          reviewUserEmail: reviewUserEmail,
+          sprintStart: startDate,
+          sprintEnd: endDate,
+        });
       }
 
       // Send results via DM
@@ -115,11 +119,20 @@ export class ChatExtractionService {
 
       // Upload analysis if available
       if (analysis) {
+        const isUserReview = purpose === "user-review";
+        const filename = isUserReview
+          ? `user-review-${reviewUserEmail}-${startDate}-to-${endDate}.txt`
+          : `sprint-retrospective-${startDate}-to-${endDate}.txt`;
+
+        const initialComment = isUserReview
+          ? `User Review Analysis for ${reviewUserEmail}`
+          : "Sprint Retrospective Analysis";
+
         await app.client.files.uploadV2({
           channel_id: dmChannelId,
           content: analysis,
-          filename: `sprint-retrospective-${startDate}-to-${endDate}.txt`,
-          initial_comment: "Sprint Retrospective Analysis",
+          filename,
+          initial_comment: initialComment,
         });
       }
 

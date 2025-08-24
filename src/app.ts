@@ -3,7 +3,7 @@ import cors from "cors";
 import { config } from "./config/env";
 import routes from "./routes";
 import { app as slackApp } from "./slack/index";
-import { gemini } from "slack/gemini";
+import { standupAgent } from "agents/standupAgent"
 import { STANDUP_MESSAGE } from "routes/stand-up";
 import isStandup from "utils/isStandup";
 
@@ -76,7 +76,7 @@ slackApp.message(async ({ message, say }) => {
     const userMessage = message as SlackMessageEvent;
 
     if(isStandup(userMessage.text)){
-      await gemini(STANDUP_MESSAGE, userMessage.text, author);
+      await standupAgent(STANDUP_MESSAGE, userMessage.text, author);
     }
   }
 });
