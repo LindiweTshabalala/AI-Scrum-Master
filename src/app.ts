@@ -5,6 +5,7 @@ import routes from "./routes";
 import { app as slackApp } from "./slack/index";
 import { gemini } from "slack/gemini";
 import { STANDUP_MESSAGE } from "routes/stand-up";
+import isStandup from "utils/isStandup";
 
 const app = express();
 
@@ -49,7 +50,8 @@ const userEmailCache = new Map<string, string>();
 slackApp.message(async ({ message, say }) => {
   if (
     message.subtype === "bot_message" ||
-    message.subtype === "message_deleted"
+    message.subtype === "message_deleted" ||
+    message.subtype === "channel_join"
   ) {
     return;
   }
@@ -73,6 +75,8 @@ slackApp.message(async ({ message, say }) => {
 
     const userMessage = message as SlackMessageEvent;
 
-    await gemini(STANDUP_MESSAGE, userMessage.text, author);
+    if(isStandup(userMessage.text)){
+      await gemini(STANDUP_MESSAGE, userMessage.text, author);
+    }
   }
 });
