@@ -45,7 +45,7 @@ type SlackMessageEvent = {
 
 const userEmailCache = new Map<string, string>();
 
-/** Resolves and caches a user's email, falling back to user ID if unavailable. */
+/** Resolves and caches a user's email, falling back to user ID if user email is unavailable. */
 async function getUserEmail(userId: string): Promise<string> {
   let email = userEmailCache.get(userId);
   if (!email) {
@@ -75,7 +75,7 @@ slackApp.message(async ({ message }) => {
   const userId = (message as any).user;
   if (userId) {
     const author = await getUserEmail(userId);
-    console.log(`Received a message from ${author}:`, message);
+    console.log(`Received a message from ${author}`);
 
     const userMessage = message as SlackMessageEvent;
 

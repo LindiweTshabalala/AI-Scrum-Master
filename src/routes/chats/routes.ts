@@ -22,11 +22,15 @@ receiver.app.post(
       outputChannelName,
     } = req.body;
 
-    if (!channelName || !startDate || !endDate) {
+    const missingBasic = !channelName || !startDate || !endDate;
+    const needsUser = purpose !== "sprint-retro";
+    if (missingBasic || (needsUser && !userToEmail)) {
       return res
         .status(400)
         .send(
-          "Missing required parameters: channelName, startDate, endDate, userToEmail"
+          needsUser
+            ? "Missing required parameters: channelName, startDate, endDate, userToEmail"
+            : "Missing required parameters: channelName, startDate, endDate"
         );
     }
 
@@ -38,7 +42,10 @@ receiver.app.post(
         );
     }
 
-    const userId = await getUserIdByEmail(config.ai_migo_token, userToEmail);
+    let userId: string | null = null;
+    if (purpose !== "sprint-retro" && userToEmail) {
+      userId = await getUserIdByEmail(config.ai_migo_token, userToEmail);
+    }
     const channelId = await slackChannelService.findChannelIdByName(
       channelName
     );
@@ -55,18 +62,16 @@ receiver.app.post(
       outputChannelId = foundOutputChannelId;
     }
 
-    if (!userId || !channelId) {
-      const errorMessage = !userId
-        ? `Could not find a user with the email: ${userToEmail}`
-        : `Could not find a public channel named #${channelName}`;
-
-      console.error(errorMessage);
+    if (!channelId || (purpose !== "sprint-retro" && !userId)) {
+      const errorMessage = !channelId
+        ? `Could not find a public channel named #${channelName}`
+        : `Could not find a user with the email: ${userToEmail}`;
       return res.status(404).send(errorMessage);
     }
 
     const result = await chatExtractionService.extractAndAnalyzeChat(
       channelId,
-      userId,
+      userId || "",
       channelName,
       startDate,
       endDate,

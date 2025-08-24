@@ -16,11 +16,6 @@ export interface AnalysisOptions {
 }
 
 /**
- * Analyzes the provided chat history and returns a sprint retrospective, user review, or award nominations.
- * @param options - Analysis options including chat history, type, and additional parameters
- * @returns A string containing the analysis result based on the specified type
- */
-/**
  * Runs AI-powered analysis (retrospective, user review, or award nominations)
  * on provided chat history using a prompt template and returns formatted text.
  */
