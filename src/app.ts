@@ -1,10 +1,22 @@
+import "reflect-metadata";
 import express, { Request, Response } from "express";
 import cors from "cors";
 import { config } from "./config/env";
 import routes from "./routes";
 import { app as slackApp } from "./slack/index";
-import { gemini } from "slack/gemini";
 import { STANDUP_MESSAGE } from "routes/stand-up";
+import { AppDataSource } from "./database/config";
+import { StandupService } from "./services/standupService";
+import { GeminiAnalysis } from "./types/gemini";
+
+// Initialize database connection
+AppDataSource.initialize()
+  .then(() => {
+    console.log("Database connection initialized");
+  })
+  .catch((error) => {
+    console.error("Error initializing database:", error);
+  });
 
 const app = express();
 
@@ -46,17 +58,45 @@ type SlackMessageEvent = {
 
 // LISTENER for EVERY message the bot receives.
 slackApp.message(async ({ message, say }) => {
-  // if (
-  //   message.subtype === "bot_message" ||
-  //   message.subtype === "message_deleted"
-  // ) {
-  //   return;
-  // }
-  const userMessage = message as SlackMessageEvent
-
+  const userMessage = message as SlackMessageEvent;
+  const standupService = new StandupService();
 
   console.log("Received a message:", message);
-  await gemini(STANDUP_MESSAGE, userMessage.text);
+  
+  try {
+    const analysis: GeminiAnalysis = await gemini(STANDUP_MESSAGE, userMessage.text);
 
-  // Log the full message object to the console to see its structure.
+    await standupService.saveStandupResponse({
+      userId: userMessage.user,
+      username: userMessage.user, // You might want to fetch actual username
+      teamId: userMessage.team,
+      response: {
+        yesterday: "", // Add parsing logic
+        today: "", // Add parsing logic
+        blockers: "", // Add parsing logic
+      },
+      sentiment: analysis.sentiment,
+      productivity: analysis.productivity,
+      aiSummary: analysis.summary,
+      metrics: analysis.metrics,
+    });
+  } catch (error) {
+    console.error("Error processing standup:", error);
+  }
 });
+
+export async function gemini(prompt: string, text: string): Promise<GeminiAnalysis> {
+  const analysis: GeminiAnalysis = {
+        sentiment: 0,
+        productivity: 0,
+        summary: "",
+        metrics: {
+            taskCompletion: 0,
+            blockersResolved: false,
+            responseTime: 0,
+            detailLevel: 0
+        }
+    };
+    
+    return analysis;
+}
