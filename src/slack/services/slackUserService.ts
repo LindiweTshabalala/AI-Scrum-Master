@@ -1,11 +1,9 @@
-import { WebClient } from "@slack/web-api";
+import { app } from "../index";
 
 /** Returns non-bot, non-app, non-deleted user IDs for the workspace. */
-export async function getActiveUserIds(botToken: string): Promise<string[]> {
-  const client = new WebClient(botToken);
-
+export async function getActiveUserIds(): Promise<string[]> {
   try {
-    const result = await client.users.list({});
+    const result = await app.client.users.list({});
 
     return (
       result.members
@@ -20,12 +18,9 @@ export async function getActiveUserIds(botToken: string): Promise<string[]> {
 }
 
 /** Looks up a user ID by email, returns null if not found. */
-export async function getUserByEmail(
-  client: WebClient,
-  email: string
-): Promise<string | null> {
+export async function getUserByEmail(email: string): Promise<string | null> {
   try {
-    const result = await client.users.lookupByEmail({ email });
+    const result = await app.client.users.lookupByEmail({ email });
     return result.user?.id || null;
   } catch (error) {
     console.error(`Failed to find user by email ${email}:`, error);

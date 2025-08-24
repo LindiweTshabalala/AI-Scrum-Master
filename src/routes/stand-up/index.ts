@@ -1,5 +1,17 @@
 import { getActiveUserIds } from "../../slack";
-import { WebClient } from "@slack/web-api";
+import bolt from "@slack/bolt";
+import { config } from "../../config/env";
+
+const { App, ExpressReceiver } = bolt;
+
+export const receiver = new ExpressReceiver({
+  signingSecret: config.signing_secret,
+});
+
+const app = new App({
+  receiver,
+  token: config.ai_migo_token,
+});
 
 export const STANDUP_MESSAGE =
   "Hey 👋 Time for daily stand-up! Please share:\n" +
@@ -7,12 +19,9 @@ export const STANDUP_MESSAGE =
   "2️⃣ What are you working on today?\n" +
   "3️⃣ Any blockers or challenges?";
 
-async function sendStandupRequest(
-  client: WebClient,
-  userId: string
-): Promise<void> {
+async function sendStandupRequest(userId: string): Promise<void> {
   try {
-    await client.chat.postMessage({
+    await app.client.chat.postMessage({
       channel: userId,
       text: STANDUP_MESSAGE,
       as_user: true,
@@ -23,12 +32,11 @@ async function sendStandupRequest(
 }
 
 export async function sendStandupReport(
-  client: WebClient,
   channel: string,
   message: string
 ): Promise<void> {
   try {
-    await client.chat.postMessage({
+    await app.client.chat.postMessage({
       channel: channel,
       text: message,
       as_user: true,
@@ -38,12 +46,11 @@ export async function sendStandupReport(
   }
 }
 
-export async function sendStandupRequests(botToken: string): Promise<void> {
-  const client = new WebClient(botToken);
-  const activeUserIds = await getActiveUserIds(botToken);
+export async function sendStandupRequests(): Promise<void> {
+  const activeUserIds = await getActiveUserIds();
 
   for (const userId of activeUserIds) {
-    await sendStandupRequest(client, userId);
+    await sendStandupRequest(userId);
     await new Promise((resolve) => setTimeout(resolve, 1500));
   }
 }

@@ -6,13 +6,9 @@ import { getUserByEmail } from "./services/slackUserService";
 import { config } from "../config/env";
 import { SlackChannelService } from "./services/slackChannelService";
 
-/** Resolves a user ID by email using a lightweight WebClient instance. */
-export async function getUserIdByEmail(
-  botToken: string,
-  email: string
-): Promise<string | null> {
-  const client = new (await import("@slack/web-api")).WebClient(botToken);
-  return getUserByEmail(client, email);
+/** Resolves a user ID by email using the bolt app client. */
+export async function getUserIdByEmail(email: string): Promise<string | null> {
+  return getUserByEmail(email);
 }
 
 export const app = new App({

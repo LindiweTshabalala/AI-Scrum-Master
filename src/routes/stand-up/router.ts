@@ -1,17 +1,11 @@
 import { Router } from "express";
-import { sendStandupRequests } from "./index";
-import { config } from "../../config/env";
+import { sendStandupRequests, receiver } from "./index";
 
 const router = Router();
 
 router.post("/trigger", async (_req, res) => {
   try {
-    const botToken = config.ai_migo_token;
-    if (!botToken) {
-      throw new Error("AI_MIGO_TOKEN is not configured");
-    }
-
-    await sendStandupRequests(botToken);
+    await sendStandupRequests();
     res.json({ success: true, message: "Stand-up requests sent successfully" });
   } catch (error) {
     console.error("Failed to send stand-up requests:", error);
@@ -23,3 +17,4 @@ router.post("/trigger", async (_req, res) => {
 });
 
 export default router;
+export { receiver };

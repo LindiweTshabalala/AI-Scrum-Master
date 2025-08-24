@@ -44,7 +44,7 @@ receiver.app.post(
 
     let userId: string | null = null;
     if (purpose !== "sprint-retro" && userToEmail) {
-      userId = await getUserIdByEmail(config.ai_migo_token, userToEmail);
+      userId = await getUserIdByEmail(userToEmail);
     }
     const channelId = await slackChannelService.findChannelIdByName(
       channelName
