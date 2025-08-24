@@ -25,6 +25,7 @@ app.listen(PORT, async () => {
   console.log("⚡️ Bolt app started");
 });
 
+const userEmailCache = new Map<string, string>();
 // LISTENER for EVERY message the bot receives.
 slackApp.message(async ({ message, say }) => {
   // Ignore messages sent by the bot itself to prevent loops.
@@ -35,6 +36,21 @@ slackApp.message(async ({ message, say }) => {
     return;
   }
 
-  // Log the full message object to the console to see its structure.
-  console.log("Received a message:", message);
+const userId = (message as any).user;
+if (userId) {
+  let email = userEmailCache.get(userId);
+  if (!email) {
+    try {
+      const resp = await slackApp.client.users.info({ user: userId });
+      email = resp.user?.profile?.email;
+      if (email) userEmailCache.set(userId, email);
+    } catch (err) {
+      console.error('Failed to resolve user email for', userId, err);
+      // leave email undefined so we can fallback
+    }
+  }
+
+  const author = email ?? userId; // prefer email, fallback to id
+  console.log('Received a message from:', author, message);
+}
 });

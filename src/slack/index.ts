@@ -20,6 +20,7 @@ export { SlackApiError } from "./errors/slackApiError";
 
 import { SlackUserService } from "./services/slackUserService";
 import { config } from "config/env";
+import { SlackChannelService } from "./services/slackChannelService";
 
 /**
  * Get only active user IDs
@@ -28,9 +29,18 @@ export async function getActiveUserIds(botToken: string): Promise<string[]> {
   const service = new SlackUserService(botToken);
   return service.getActiveUserIds();
 }
+export async function getUserIdByEmail(
+  botToken: string,
+  email: string
+): Promise<string | null | undefined> {
+  const service = new SlackUserService(botToken);
+  return service.findUserIdByEmail(email);
+}
 
 export const app = new App({
   token: config.ai_migo_token,
   appToken: config.slack_app_token,
   socketMode: true,
 });
+
+export const slackChannelService = new SlackChannelService(app);
