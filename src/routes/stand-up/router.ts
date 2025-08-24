@@ -3,10 +3,7 @@ import { sendStandupRequests } from "./index";
 
 const router = Router();
 
-/**
- * Triggers stand-up requests to be sent to all active users
- */
-router.post("/trigger", async (req, res) => {
+router.post("/trigger", async (_req, res) => {
   try {
     const botToken = process.env.AI_MIGO_TOKEN;
     if (!botToken) {

@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
-import { config } from "config/env";
+import { config } from "../../config/env";
 import { getUserIdByEmail, slackChannelService } from "../../slack/index";
 import { chatExtractionService } from "../../slack/services/chatExtractionService";
 import bolt from "@slack/bolt";
 const { ExpressReceiver } = bolt;
-import type { TriggerExtractionRequestBody } from "slack/types/slack";
+import type { TriggerExtractionRequestBody } from "../../slack/types/slack";
 
 // 1. Create an ExpressReceiver
 export const receiver = new ExpressReceiver({
@@ -21,10 +21,10 @@ receiver.app.post(
       reviewUserEmail,
       userToEmail,
       purpose,
+      outputChannelName,
     } = req.body;
 
-    // Validate required parameters
-    if (!channelName || !startDate || !endDate || !userToEmail) {
+    if (!channelName || !startDate || !endDate) {
       return res
         .status(400)
         .send(
@@ -32,11 +32,32 @@ receiver.app.post(
         );
     }
 
-    // Look up IDs first
+    // For sprint-retro, outputChannelName is required
+    if (purpose === "sprint-retro" && !outputChannelName) {
+      return res
+        .status(400)
+        .send(
+          "Missing required parameter: outputChannelName is required for sprint-retro analysis"
+        );
+    }
+
     const userId = await getUserIdByEmail(config.ai_migo_token, userToEmail);
     const channelId = await slackChannelService.findChannelIdByName(
       channelName
     );
+
+    // Look up output channel ID for sprint-retro
+    let outputChannelId: string | undefined;
+    if (purpose === "sprint-retro" && outputChannelName) {
+      const foundOutputChannelId =
+        await slackChannelService.findChannelIdByName(outputChannelName);
+      if (!foundOutputChannelId) {
+        return res
+          .status(404)
+          .send(`Could not find output channel named #${outputChannelName}`);
+      }
+      outputChannelId = foundOutputChannelId;
+    }
 
     // Validate lookups
     if (!userId || !channelId) {
@@ -56,7 +77,8 @@ receiver.app.post(
       startDate,
       endDate,
       reviewUserEmail,
-      purpose
+      purpose,
+      outputChannelId
     );
 
     if (!result.success) {

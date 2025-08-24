@@ -2,18 +2,16 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import { config } from "./config/env";
 import routes from "./routes";
-import { app as slackApp } from "./slack/index";
-import { standupAgent } from "agents/standupAgent"
-import { STANDUP_MESSAGE } from "routes/stand-up";
-import isStandup from "utils/isStandup";
+import { app as slackApp } from "./slack";
+import { standupAgent } from "./agents/standupAgent";
+import { STANDUP_MESSAGE } from "./routes/stand-up";
+import isStandup from "./utils/isStandup";
 
 const app = express();
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Health check endpoint
 app.get("/health", (_req: Request, res: Response) => {
   res.status(200).json({ status: "healthy" });
 });
@@ -38,7 +36,7 @@ type SlackMessageEvent = {
   blocks: {
     type: "rich_text";
     block_id: string;
-    elements: unknown[]; // can refine further if you know the element structure
+    elements: unknown[];
   }[];
   channel: string;
   event_ts: string;
@@ -46,8 +44,24 @@ type SlackMessageEvent = {
 };
 
 const userEmailCache = new Map<string, string>();
-// LISTENER for EVERY message the bot receives.
-slackApp.message(async ({ message, say }) => {
+
+async function getUserEmail(userId: string): Promise<string> {
+  let email = userEmailCache.get(userId);
+  if (!email) {
+    try {
+      const resp = await slackApp.client.users.info({ user: userId });
+      email = resp.user?.profile?.email;
+      if (email) {
+        userEmailCache.set(userId, email);
+      }
+    } catch (err) {
+      console.error("Failed to resolve user email for", userId, err);
+    }
+  }
+  return email ?? userId;
+}
+
+slackApp.message(async ({ message }) => {
   if (
     message.subtype === "bot_message" ||
     message.subtype === "message_deleted" ||
@@ -58,24 +72,12 @@ slackApp.message(async ({ message, say }) => {
 
   const userId = (message as any).user;
   if (userId) {
-    let email = userEmailCache.get(userId);
-    if (!email) {
-      try {
-        const resp = await slackApp.client.users.info({ user: userId });
-        email = resp.user?.profile?.email;
-        if (email) userEmailCache.set(userId, email);
-      } catch (err) {
-        console.error("Failed to resolve user email for", userId, err);
-        // leave email undefined so we can fallback
-      }
-    }
-
-    const author = email ?? userId; // prefer email, fallback to id
+    const author = await getUserEmail(userId);
     console.log(`Received a message from ${author}:`, message);
 
     const userMessage = message as SlackMessageEvent;
 
-    if(isStandup(userMessage.text)){
+    if (isStandup(userMessage.text)) {
       await standupAgent(STANDUP_MESSAGE, userMessage.text, author);
     }
   }

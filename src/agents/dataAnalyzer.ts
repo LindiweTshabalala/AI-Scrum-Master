@@ -1,25 +1,25 @@
 import { GoogleGenAI } from "@google/genai";
-import fs from "node:fs/promises";
-import path from "node:path";
+import { config } from "config/env";
+import { loadPrompt } from "./promptLoader";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? "";
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 export type AnalysisType = "sprint-retro" | "user-review" | "award-nominations";
 
-interface AnalysisOptions {
+export interface AnalysisOptions {
   chatHistory: string;
   author: string;
   type: AnalysisType;
-  reviewUserEmail?: string;
-  sprintStart?: string;
-  sprintEnd?: string;
+  reviewUserEmail?: string | undefined;
+  sprintStart?: string | undefined;
+  sprintEnd?: string | undefined;
 }
 
 /**
- * Analyzes the provided chat history and returns either a sprint retrospective or user review summary.
+ * Analyzes the provided chat history and returns a sprint retrospective, user review, or award nominations.
  * @param options - Analysis options including chat history, type, and additional parameters
- * @returns A string containing either the sprint retrospective or user review
+ * @returns A string containing the analysis result based on the specified type
  */
 export async function dataAnalyzer({
   chatHistory,
@@ -30,18 +30,20 @@ export async function dataAnalyzer({
   sprintEnd,
 }: AnalysisOptions): Promise<string> {
   // Determine which template to use based on analysis type
-  const templateName =
-    type === "user-review" ? "formatUserReview.txt" : "formatRetrospective.txt";
+  let templateName: string;
+  switch (type) {
+    case "user-review":
+      templateName = "formatUserReview.txt";
+      break;
+    case "award-nominations":
+      templateName = "formatAwardNominations.txt";
+      break;
+    default:
+      templateName = "formatRetrospective.txt";
+  }
 
   // Read the appropriate template
-  const promptPath = path.join(
-    process.cwd(),
-    "src",
-    "agents",
-    "propmts",
-    templateName
-  );
-  const template = await fs.readFile(promptPath, "utf-8");
+  const template = await loadPrompt(templateName);
 
   // Fill in the common placeholders
   let prompt = template
@@ -49,20 +51,31 @@ export async function dataAnalyzer({
     .replace("{{chat_history}}", chatHistory);
 
   // Add type-specific replacements
-  if (type === "user-review" && reviewUserEmail) {
-    prompt = prompt
-      .replace("{{review_user_email}}", reviewUserEmail)
-      .replace("{{sprint_start}}", sprintStart || "Not specified")
-      .replace("{{sprint_end}}", sprintEnd || "Not specified");
-  } else {
-    prompt = prompt.replace("{{author}}", author);
+  switch (type) {
+    case "user-review":
+      if (reviewUserEmail) {
+        prompt = prompt
+          .replace("{{review_user_email}}", reviewUserEmail)
+          .replace("{{sprint_start}}", sprintStart || "Not specified")
+          .replace("{{sprint_end}}", sprintEnd || "Not specified");
+      }
+      break;
+    case "award-nominations":
+      prompt = prompt
+        .replace("{{start_date}}", sprintStart || "Not specified")
+        .replace("{{end_date}}", sprintEnd || "Not specified");
+      break;
+    default:
+      prompt = prompt.replace("{{author}}", author);
   }
 
+  console.log(`Using template: ${templateName}`);
+  console.log(`Analysis type: ${type}`);
+
   const aiResponse = await ai.models.generateContent({
-    model: "gemini-2.0-flash-001",
+    model: config.ai_model,
     contents: prompt,
   });
 
-  // Return the generated summary as a string
   return (aiResponse as any).text ?? JSON.stringify(aiResponse);
 }

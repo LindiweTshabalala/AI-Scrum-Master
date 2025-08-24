@@ -1,40 +1,17 @@
 import bolt from "@slack/bolt";
 const { App } = bolt;
-/**
- * Main entry point - Public API exports
- */
+export { getActiveUserIds, getUserByEmail } from "./services/slackUserService";
 
-// Export main service class
-export { SlackUserService } from "./services/slackUserService";
-
-// Export types for consumers
-export type {
-  SlackUser,
-  GetUsersOptions,
-  GetUsersResult,
-  UserStats,
-} from "./types/slack.js";
-
-// Export error class
-export { SlackApiError } from "./errors/slackApiError";
-
-import { SlackUserService } from "./services/slackUserService";
-import { config } from "config/env";
+import { getUserByEmail } from "./services/slackUserService";
+import { config } from "../config/env";
 import { SlackChannelService } from "./services/slackChannelService";
 
-/**
- * Get only active user IDs
- */
-export async function getActiveUserIds(botToken: string): Promise<string[]> {
-  const service = new SlackUserService(botToken);
-  return service.getActiveUserIds();
-}
 export async function getUserIdByEmail(
   botToken: string,
   email: string
-): Promise<string | null | undefined> {
-  const service = new SlackUserService(botToken);
-  return service.findUserIdByEmail(email);
+): Promise<string | null> {
+  const client = new (await import("@slack/web-api")).WebClient(botToken);
+  return getUserByEmail(client, email);
 }
 
 export const app = new App({
