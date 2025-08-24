@@ -71,8 +71,8 @@ slackApp.message(async ({ message, say }) => {
     const author = email ?? userId; // prefer email, fallback to id
     console.log(`Received a message from ${author}:`, message);
 
-    const userMessage = { ...message, user: author } as SlackMessageEvent;
+    const userMessage = message as SlackMessageEvent;
 
-    await gemini(STANDUP_MESSAGE, userMessage.text);
+    await gemini(STANDUP_MESSAGE, userMessage.text, author);
   }
 });
